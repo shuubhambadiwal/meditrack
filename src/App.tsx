@@ -1,14 +1,18 @@
-import './App.css'
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-function App() {
+const queryClient = new QueryClient();
 
-  return (
-    <>
-      <div>
-        <h1>Hello world!</h1>
-      </div>
-    </>
-  )
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<div>Dashboard</div>} />
+            <Route path="/patients" element={<div>Patients</div>} />
+            <Route path="/sql" element={<div>SQL Console</div>} />
+          </Routes>
+        </BrowserRouter>
+  </QueryClientProvider>
+);
 
-export default App
+export default App;
