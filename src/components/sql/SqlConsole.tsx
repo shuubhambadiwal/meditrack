@@ -390,7 +390,7 @@ export function SqlConsole() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-between px-4 py-2 border-t bg-background sticky bottom-0 z-10">
+              <div className="flex justify-end px-4 py-2 border-t bg-background sticky bottom-0 z-10">
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -408,7 +408,7 @@ export function SqlConsole() {
                   >
                     {"<"}
                   </Button>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm pt-1 text-muted-foreground">
                     Page {pagination.pageIndex + 1} of {table.getPageCount()}
                   </div>
                   <Button
