@@ -398,14 +398,14 @@ export function SqlConsole() {
               </div>
               <div className="flex justify-end px-4 py-2 border-t bg-background sticky bottom-0 z-10">
                 <div className="flex gap-2">
-                  <Button
+                  {/* <Button
                     size="sm"
                     variant="outline"
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
                   >
                     {"<<"}
-                  </Button>
+                  </Button> */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -414,7 +414,7 @@ export function SqlConsole() {
                   >
                     {"<"}
                   </Button>
-                  <div className="text-sm pt-3 text-muted-foreground">
+                  <div className="text-sm pt-2 text-muted-foreground">
                     Page {pagination.pageIndex + 1} of {table.getPageCount()}
                   </div>
                   <Button
@@ -425,14 +425,14 @@ export function SqlConsole() {
                   >
                     {">"}
                   </Button>
-                  <Button
+                  {/* <Button
                     size="sm"
                     variant="outline"
                     onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                     disabled={!table.getCanNextPage()}
                   >
                     {">>"}
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </CardContent>
