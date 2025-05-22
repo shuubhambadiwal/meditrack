@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,6 +96,14 @@ export function PatientForm() {
     const subscription = form.watch((value) => saveFormData(value));
     return () => subscription.unsubscribe();
   }, [form]);
+
+   // Helper: check if form is empty
+   const isFormEmpty = useMemo(() => {
+    const values = form.getValues();
+    return Object.values(values).every(
+      (v) => v === "" || v === undefined
+    );
+  }, [form.watch()]); 
 
   const handleClearForm = () => {
     form.reset({
@@ -205,6 +213,7 @@ export function PatientForm() {
           variant="outline"
           size="sm"
           onClick={handleClearForm}
+          disabled={isFormEmpty}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
         >
           <RefreshCcw className="h-4 w-4" />
