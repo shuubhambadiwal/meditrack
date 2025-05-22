@@ -1,4 +1,3 @@
-
 import { useDb } from "@/lib/db";
 import { useState, useEffect } from "react";
 
@@ -44,9 +43,9 @@ export function useFormPersistence(formId: string, initialData: any = {}) {
       // Use upsert to save form data
       await db.exec(`
         INSERT INTO form_persistence (form_id, form_data, updated_at)
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (form_id) 
-        DO UPDATE SET form_data = $2, updated_at = CURRENT_TIMESTAMP
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(form_id)
+        DO UPDATE SET form_data = excluded.form_data, updated_at = CURRENT_TIMESTAMP
       `, [formId, JSON.stringify(data)]);
     } catch (err) {
       console.error(`Failed to save form data for ${formId}:`, err);
@@ -60,7 +59,7 @@ export function useFormPersistence(formId: string, initialData: any = {}) {
     setFormData(initialData);
     
     try {
-      await db.exec(`DELETE FROM form_persistence WHERE form_id = $1`, [formId]);
+      await db.exec(`DELETE FROM form_persistence WHERE form_id = ?`, [formId]);
     } catch (err) {
       console.error(`Failed to clear form data for ${formId}:`, err);
     }

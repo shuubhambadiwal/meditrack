@@ -102,11 +102,12 @@ export function SqlConsole() {
   const saveSqlSettings = async (key: string, value: any) => {
     if (!db) return;
     try {
-      await db.exec(`
-        INSERT INTO sql_settings (key, value) 
-        VALUES (?, ?) 
-        ON CONFLICT (key) DO UPDATE SET value = excluded.value
-      `, [key, typeof value === 'object' ? JSON.stringify(value) : value]);
+      await db.exec(
+        `INSERT INTO sql_settings (key, value)
+         VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
+        [key, typeof value === "object" ? JSON.stringify(value) : value]
+      );
     } catch (err) {
       console.error(`Failed to save SQL setting ${key}:`, err);
     }

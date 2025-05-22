@@ -172,7 +172,7 @@ export function PatientForm() {
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      form.reset(DEFAULT_VALUES); // Reset to default values after submit
+      form.reset(DEFAULT_VALUES); 
     } catch (err) {
       toast({
         variant: "destructive",
