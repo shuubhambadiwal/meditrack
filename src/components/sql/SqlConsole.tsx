@@ -26,7 +26,6 @@ const calculateAge = (dateOfBirth: string): number => {
 
 // Helper function to format column headers
 const formatColumnHeader = (header: string): string => {
-  // Replace underscores with spaces and capitalize each word
   return header
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -45,13 +44,18 @@ export function SqlConsole() {
   const [activeTab, setActiveTab] = useState<string>("results");
   const { toast } = useToast();
 
-  // Load saved SQL and results on component mount from PGlite
+  
   useEffect(() => {
     const loadSavedData = async () => {
       if (!db) return;
       
       try {
-        // Create SQL settings table if it doesn't exist
+
+        const historyQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'sql_history'`);
+        if (historyQuery.rows?.length) {
+          setSqlHistory(JSON.parse(historyQuery.rows[0].value));
+        }
+       
         await db.exec(`
           CREATE TABLE IF NOT EXISTS sql_settings (
             key TEXT PRIMARY KEY,
@@ -59,16 +63,16 @@ export function SqlConsole() {
           );
         `);
         
-        // Load saved query
+
         const queryResult = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_query'`);
         if (queryResult.rows && queryResult.rows.length > 0) {
           setSql(queryResult.rows[0].value);
         } else {
-          // Set default query if none exists
+       
           setSql("SELECT * FROM patients;");
         }
         
-        // Load saved results
+  
         const resultsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_results'`);
         const columnsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_columns'`);
         const headersQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_headers'`);
@@ -87,13 +91,19 @@ export function SqlConsole() {
       loadSavedData();
     }
   }, [db, loading]);
+
+  useEffect(() => {
+    if (db && sqlHistory.length) {
+      saveSqlSettings('sql_history', sqlHistory);
+    }
+  }, [sqlHistory, db]);
   
   // Function to save settings to PGlite
   const saveSqlSettings = async (key: string, value: any) => {
     if (!db) return;
     
     try {
-      // Use upsert pattern (insert or update)
+
       await db.exec(`
         INSERT INTO sql_settings (key, value) 
         VALUES ($1, $2) 
@@ -104,14 +114,14 @@ export function SqlConsole() {
     }
   };
   
-  // Save current SQL query when it changes
+  
   useEffect(() => {
     if (sql && db) {
       saveSqlSettings('last_query', sql);
     }
   }, [sql, db]);
 
-  // Function to reset results
+  
   const resetResults = async () => {
     if (!db) return;
     
@@ -119,7 +129,7 @@ export function SqlConsole() {
     setResultColumns([]);
     setFormattedHeaders({});
     
-    // Clear saved results from PGlite
+    
     try {
       await db.exec(`
         DELETE FROM sql_settings 
@@ -140,7 +150,7 @@ export function SqlConsole() {
     }
   };
 
-  // Function to execute SQL
+ 
   const executeQuery = async () => {
     if (!db || loading || !sql.trim()) return;
 
@@ -148,22 +158,22 @@ export function SqlConsole() {
     const startTime = performance.now();
 
     try {
-      // Execute the query using PGlite's query method
+    
       const result = await db.query(sql);
       
-      // Capture execution time
+     
       const endTime = performance.now();
       setExecutionTime(endTime - startTime);
       
-      // Extract and set columns if we have results and rows
+      
       if (result.rows && result.rows.length > 0) {
         const columns = Object.keys(result.rows[0]);
         
-        // Process results - add age if date_of_birth is present
+       
         const processedResults = result.rows.map(row => {
           const processedRow = { ...row };
           
-          // Add calculated age if date_of_birth exists
+ 
           if (row.date_of_birth) {
             processedRow.age = calculateAge(row.date_of_birth);
           }
@@ -171,13 +181,13 @@ export function SqlConsole() {
           return processedRow;
         });
         
-        // Create formatted headers mapping
+        
         const headers: {[key: string]: string} = {};
         columns.forEach(col => {
           headers[col] = formatColumnHeader(col);
         });
         
-        // Add 'age' to headers
+      
         if (columns.includes('date_of_birth')) {
           headers['age'] = 'Age';
         }
@@ -185,59 +195,59 @@ export function SqlConsole() {
         setFormattedHeaders(headers);
         setResults(processedResults);
         
-        // Reorder columns to place age right after gender if both exist
+      
         let reorderedColumns = [...columns];
         
         if (columns.includes('date_of_birth') && columns.includes('gender')) {
-          // Remove age if it was already there
+        
           reorderedColumns = reorderedColumns.filter(col => col !== 'age');
           
-          // Find index of gender and insert age after it
+      
           const genderIndex = reorderedColumns.indexOf('gender');
           if (genderIndex !== -1) {
             reorderedColumns.splice(genderIndex + 1, 0, 'age');
           }
         } else if (columns.includes('date_of_birth')) {
-          // Just add age at the end if gender doesn't exist
+          
           reorderedColumns.push('age');
         }
         
         setResultColumns(reorderedColumns);
         
-        // Save results to PGlite
+     
         await saveSqlSettings('last_results', processedResults);
         await saveSqlSettings('last_columns', reorderedColumns);
         await saveSqlSettings('last_headers', headers);
       } else if (result.rows) {
-        // Query returned an empty result set
+       
         setResultColumns([]);
         setFormattedHeaders({});
         setResults([]);
         
-        // Clear saved results
+        
         await db.exec(`
           DELETE FROM sql_settings 
           WHERE key IN ('last_results', 'last_columns', 'last_headers')
         `);
       } else {
-        // Query was successful but didn't return rows (e.g., INSERT)
+        
         setResultColumns(['rowCount']);
         const headers = { 'rowCount': 'Row Count' };
         setFormattedHeaders(headers);
         const queryResults = [{ rowCount: result.rowCount || 'Success' }];
         setResults(queryResults);
         
-        // Save results to PGlite
+        
         await saveSqlSettings('last_results', queryResults);
         await saveSqlSettings('last_columns', ['rowCount']);
         await saveSqlSettings('last_headers', headers);
       }
 
-      // Update history
+     
       setSqlHistory(prev => {
-        // Only add to history if it's a new query
+       
         if (!prev.includes(sql)) {
-          const newHistory = [...prev, sql].slice(-10); // Keep last 10 queries
+          const newHistory = [...prev, sql].slice(-10); 
           return newHistory;
         }
         return prev;
@@ -261,18 +271,18 @@ export function SqlConsole() {
     }
   };
 
-  // Listen for changes from other tabs
+ 
   useDbChanges(async (message) => {
     if (message.type === 'patient-added' && activeTab === 'results') {
       if (sql.toLowerCase().includes('from patients')) {
-        // Re-execute the query to refresh the results
+      
         executeQuery();
       }
     }
   });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Execute on Ctrl+Enter or Cmd+Enter
+  
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       executeQuery();
