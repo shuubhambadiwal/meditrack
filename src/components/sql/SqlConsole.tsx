@@ -92,33 +92,33 @@ export function SqlConsole() {
     }
   }, [db, loading]);
 
-  useEffect(() => {
-    if (db && sqlHistory.length) {
-      saveSqlSettings('sql_history', sqlHistory);
-    }
-  }, [sqlHistory, db]);
+  // useEffect(() => {
+  //   if (db && sqlHistory.length) {
+  //     saveSqlSettings('sql_history', sqlHistory);
+  //   }
+  // }, [sqlHistory, db]);
   
   // Function to save settings to PGlite
-  const saveSqlSettings = async (key: string, value: any) => {
-    if (!db) return;
-    try {
-      await db.exec(
-        `INSERT INTO sql_settings (key, value)
-         VALUES (?, ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
-        [key, typeof value === "object" ? JSON.stringify(value) : value]
-      );
-    } catch (err) {
-      console.error(`Failed to save SQL setting ${key}:`, err);
-    }
-  };
+  // const saveSqlSettings = async (key: string, value: any) => {
+  //   if (!db) return;
+  //   try {
+  //     await db.exec(
+  //       `INSERT INTO sql_settings (key, value)
+  //        VALUES (?, ?)
+  //        ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
+  //       [key, typeof value === "object" ? JSON.stringify(value) : value]
+  //     );
+  //   } catch (err) {
+  //     console.error(`Failed to save SQL setting ${key}:`, err);
+  //   }
+  // };
   
   
-  useEffect(() => {
-    if (sql && db) {
-      saveSqlSettings('last_query', sql);
-    }
-  }, [sql, db]);
+  // useEffect(() => {
+  //   if (sql && db) {
+  //     saveSqlSettings('last_query', sql);
+  //   }
+  // }, [sql, db]);
 
   
   const resetResults = async () => {
@@ -214,9 +214,9 @@ export function SqlConsole() {
         setResultColumns(reorderedColumns);
         
      
-        await saveSqlSettings('last_results', processedResults);
-        await saveSqlSettings('last_columns', reorderedColumns);
-        await saveSqlSettings('last_headers', headers);
+        // await saveSqlSettings('last_results', processedResults);
+        // await saveSqlSettings('last_columns', reorderedColumns);
+        // await saveSqlSettings('last_headers', headers);
       } else if (result.rows) {
        
         setResultColumns([]);
@@ -237,9 +237,9 @@ export function SqlConsole() {
         setResults(queryResults);
         
         
-        await saveSqlSettings('last_results', queryResults);
-        await saveSqlSettings('last_columns', ['rowCount']);
-        await saveSqlSettings('last_headers', headers);
+        // await saveSqlSettings('last_results', queryResults);
+        // await saveSqlSettings('last_columns', ['rowCount']);
+        // await saveSqlSettings('last_headers', headers);
       }
 
      
