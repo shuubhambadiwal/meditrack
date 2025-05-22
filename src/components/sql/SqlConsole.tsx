@@ -7,6 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Square } from "lucide-react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  ColumnDef,
+  PaginationState,
+} from "@tanstack/react-table";
 
 // Helper function to calculate age from date of birth
 const calculateAge = (dateOfBirth: string): number => {
@@ -47,6 +54,10 @@ export function SqlConsole() {
   const [sqlHistory, setSqlHistory] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("results");
   const { toast } = useToast();
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 8,
+  });
 
   useEffect(() => {
     const loadSavedData = async () => {
@@ -248,6 +259,22 @@ export function SqlConsole() {
     setSql(item);
   };
 
+  const columns = resultColumns.map((column) => ({
+    accessorKey: column,
+    header: formattedHeaders[column] || formatColumnHeader(column),
+    cell: (info: any) => info.getValue() !== null ? String(info.getValue()) : "NULL",
+  })) as ColumnDef<any>[];
+
+  const table = useReactTable({
+    data: results,
+    columns,
+    state: { pagination },
+    getCoreRowModel: getCoreRowModel(),
+    onPaginationChange: setPagination,
+    manualPagination: false,
+    pageCount: Math.ceil(results.length / pagination.pageSize),
+  });
+
   if (error) {
     return (
       <div className="flex items-center justify-center p-4">
@@ -296,6 +323,7 @@ export function SqlConsole() {
           <TabsTrigger value="history">Query History</TabsTrigger>
         </TabsList>
 
+        
         <TabsContent value="results" className="mt-4">
           <Card>
             <CardContent className="p-0">
@@ -314,40 +342,85 @@ export function SqlConsole() {
                   </Button>
                 </div>
               </div>
-              <ScrollArea className="h-[300px] rounded-md theme-transition">
+              <div className="min-w-full w-fit overflow-x-auto">
                 {results.length > 0 ? (
-                  <div className="min-w-full w-fit overflow-x-auto">
+                  <div>
                     <table className="min-w-max divide-y divide-border">
                       <thead>
-                        <tr>
-                          {resultColumns.map((column) => (
-                            <th
-                              key={column}
-                              className="bg-muted px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap theme-transition"
-                            >
-                              {formattedHeaders[column] ||
-                                formatColumnHeader(column)}
-                            </th>
-                          ))}
-                        </tr>
+                        {table.getHeaderGroups().map(headerGroup => (
+                          <tr key={headerGroup.id}>
+                            {headerGroup.headers.map(header => (
+                              <th
+                                key={header.id}
+                                className="bg-muted px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap theme-transition"
+                              >
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                              </th>
+                            ))}
+                          </tr>
+                        ))}
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {results.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {resultColumns.map((column) => (
+                        {table.getRowModel().rows.map(row => (
+                          <tr key={row.id}>
+                            {row.getVisibleCells().map(cell => (
                               <td
-                                key={`${rowIndex}-${column}`}
+                                key={cell.id}
                                 className="px-4 py-2 text-sm whitespace-nowrap theme-transition"
                               >
-                                {row[column] !== null
-                                  ? String(row[column])
-                                  : "NULL"}
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
                               </td>
                             ))}
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between px-4 py-2 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Page {pagination.pageIndex + 1} of {table.getPageCount()}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => table.setPageIndex(0)}
+                          disabled={!table.getCanPreviousPage()}
+                        >
+                          {"<<"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => table.previousPage()}
+                          disabled={!table.getCanPreviousPage()}
+                        >
+                          {"<"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => table.nextPage()}
+                          disabled={!table.getCanNextPage()}
+                        >
+                          {">"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                          disabled={!table.getCanNextPage()}
+                        >
+                          {">>"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] w-full">
@@ -358,7 +431,7 @@ export function SqlConsole() {
                     </p>
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
