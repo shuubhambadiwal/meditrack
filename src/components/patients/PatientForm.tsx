@@ -66,41 +66,16 @@ export function PatientForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<PatientFormValues>({
-    resolver: zodResolver(patientFormSchema),
-    defaultValues: DEFAULT_VALUES,
-    mode: "onChange",
-  });
-
-  useEffect(() => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-  
-        const validGenders = [
-          "male",
-          "female",
-          "non-binary",
-          "other",
-          "prefer-not-to-say",
-          ""
-        ];
-        const gender =
-          typeof parsedData.gender === "string" &&
-          validGenders.includes(parsedData.gender)
-            ? parsedData.gender
-            : "";
-  
-        form.reset({ ...DEFAULT_VALUES, ...parsedData, gender });
+  let initialValues = DEFAULT_VALUES;
+  const savedData = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+  if (savedData) {
+    try {
+      const parsedData = JSON.parse(savedData);
+      initialValues = { ...DEFAULT_VALUES, ...parsedData };
       } catch (err) {
         console.error("Failed to parse saved form data:", err);
-        form.reset(DEFAULT_VALUES);
       }
-    } else {
-      form.reset(DEFAULT_VALUES);
-    }
-  }, []);
+    } 
 
   const saveFormData = (values: Partial<PatientFormValues>) => {
     try {
@@ -109,6 +84,12 @@ export function PatientForm() {
       console.error("Failed to save form data:", err);
     }
   };
+
+  const form = useForm<PatientFormValues>({
+    resolver: zodResolver(patientFormSchema),
+    defaultValues: initialValues,
+    mode: "onChange",
+  });
 
   useEffect(() => {
     const subscription = form.watch((value) => saveFormData(value));
