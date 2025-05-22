@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useDb, useDbChanges } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Square } from "lucide-react";
 
 // Helper function to calculate age from date of birth
 const calculateAge = (dateOfBirth: string): number => {
@@ -33,7 +35,7 @@ const formatColumnHeader = (header: string): string => {
 
 export function SqlConsole() {
   const { db, loading, error } = useDb();
-  const [sql, setSql] = useState<string>("SELECT * FROM patients;");
+  const [sql, setSql] = useState<string>("");
   const [results, setResults] = useState<any[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [resultColumns, setResultColumns] = useState<string[]>([]);
@@ -42,6 +44,101 @@ export function SqlConsole() {
   const [sqlHistory, setSqlHistory] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("results");
   const { toast } = useToast();
+
+  // Load saved SQL and results on component mount from PGlite
+  useEffect(() => {
+    const loadSavedData = async () => {
+      if (!db) return;
+      
+      try {
+        // Create SQL settings table if it doesn't exist
+        await db.exec(`
+          CREATE TABLE IF NOT EXISTS sql_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          );
+        `);
+        
+        // Load saved query
+        const queryResult = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_query'`);
+        if (queryResult.rows && queryResult.rows.length > 0) {
+          setSql(queryResult.rows[0].value);
+        } else {
+          // Set default query if none exists
+          setSql("SELECT * FROM patients;");
+        }
+        
+        // Load saved results
+        const resultsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_results'`);
+        const columnsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_columns'`);
+        const headersQuery = await db.query(`SELECT value FROM sql_settings WHERE key = 'last_headers'`);
+        
+        if (resultsQuery.rows?.length && columnsQuery.rows?.length && headersQuery.rows?.length) {
+          setResults(JSON.parse(resultsQuery.rows[0].value));
+          setResultColumns(JSON.parse(columnsQuery.rows[0].value));
+          setFormattedHeaders(JSON.parse(headersQuery.rows[0].value));
+        }
+      } catch (err) {
+        console.error("Failed to load saved SQL data:", err);
+      }
+    };
+    
+    if (db && !loading) {
+      loadSavedData();
+    }
+  }, [db, loading]);
+  
+  // Function to save settings to PGlite
+  const saveSqlSettings = async (key: string, value: any) => {
+    if (!db) return;
+    
+    try {
+      // Use upsert pattern (insert or update)
+      await db.exec(`
+        INSERT INTO sql_settings (key, value) 
+        VALUES ($1, $2) 
+        ON CONFLICT (key) DO UPDATE SET value = $2
+      `, [key, typeof value === 'object' ? JSON.stringify(value) : value]);
+    } catch (err) {
+      console.error(`Failed to save SQL setting ${key}:`, err);
+    }
+  };
+  
+  // Save current SQL query when it changes
+  useEffect(() => {
+    if (sql && db) {
+      saveSqlSettings('last_query', sql);
+    }
+  }, [sql, db]);
+
+  // Function to reset results
+  const resetResults = async () => {
+    if (!db) return;
+    
+    setResults([]);
+    setResultColumns([]);
+    setFormattedHeaders({});
+    
+    // Clear saved results from PGlite
+    try {
+      await db.exec(`
+        DELETE FROM sql_settings 
+        WHERE key IN ('last_results', 'last_columns', 'last_headers')
+      `);
+      
+      toast({
+        title: "Results cleared",
+        description: "Query results have been reset",
+      });
+    } catch (err) {
+      console.error("Failed to clear saved results:", err);
+      toast({
+        variant: "destructive",
+        title: "Error clearing results",
+        description: "Failed to reset query results",
+      });
+    }
+  };
 
   // Function to execute SQL
   const executeQuery = async () => {
@@ -106,23 +203,42 @@ export function SqlConsole() {
         }
         
         setResultColumns(reorderedColumns);
+        
+        // Save results to PGlite
+        await saveSqlSettings('last_results', processedResults);
+        await saveSqlSettings('last_columns', reorderedColumns);
+        await saveSqlSettings('last_headers', headers);
       } else if (result.rows) {
         // Query returned an empty result set
         setResultColumns([]);
         setFormattedHeaders({});
         setResults([]);
+        
+        // Clear saved results
+        await db.exec(`
+          DELETE FROM sql_settings 
+          WHERE key IN ('last_results', 'last_columns', 'last_headers')
+        `);
       } else {
         // Query was successful but didn't return rows (e.g., INSERT)
         setResultColumns(['rowCount']);
-        setFormattedHeaders({ 'rowCount': 'Row Count' });
-        setResults([{ rowCount: result.rowCount || 'Success' }]);
+        const headers = { 'rowCount': 'Row Count' };
+        setFormattedHeaders(headers);
+        const queryResults = [{ rowCount: result.rowCount || 'Success' }];
+        setResults(queryResults);
+        
+        // Save results to PGlite
+        await saveSqlSettings('last_results', queryResults);
+        await saveSqlSettings('last_columns', ['rowCount']);
+        await saveSqlSettings('last_headers', headers);
       }
 
       // Update history
       setSqlHistory(prev => {
         // Only add to history if it's a new query
         if (!prev.includes(sql)) {
-          return [...prev, sql].slice(-10); // Keep last 10 queries
+          const newHistory = [...prev, sql].slice(-10); // Keep last 10 queries
+          return newHistory;
         }
         return prev;
       });
@@ -217,10 +333,22 @@ export function SqlConsole() {
         <TabsContent value="results" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              <ScrollArea className="h-[400px] rounded-md border theme-transition">
-                <div className="overflow-x-auto w-full">
+              <div className="flex justify-end p-2 border-b">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={resetResults}
+                  className="flex items-center gap-1"
+                  disabled={results.length === 0}
+                >
+                  <Square className="h-4 w-4" />
+                  Reset
+                </Button>
+              </div>
+              <ScrollArea className="h-[400px] rounded-md theme-transition">
+                <div className="overflow-auto">
                   {results.length > 0 ? (
-                    <div className="w-full">
+                    <div className="w-full min-w-max">
                       <table className="min-w-full divide-y divide-border">
                         <thead>
                           <tr>

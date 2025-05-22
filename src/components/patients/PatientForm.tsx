@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +42,9 @@ const patientFormSchema = z.object({
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
+// Storage key for form data
+const STORAGE_KEY = 'patient_form_data';
+
 export function PatientForm() {
   const { db, loading, error } = useDb();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +67,34 @@ export function PatientForm() {
       allergies: "",
     },
   });
+  
+  // Load saved form data on component mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        form.reset(parsedData);
+      } catch (err) {
+        console.error("Failed to parse saved form data:", err);
+      }
+    }
+  }, [form]);
+  
+  // Save form data on change
+  const saveFormData = (values: Partial<PatientFormValues>) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+    } catch (err) {
+      console.error("Failed to save form data:", err);
+    }
+  };
+  
+  // Update local storage when form values change
+  useEffect(() => {
+    const subscription = form.watch((value) => saveFormData(value));
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   async function onSubmit(values: PatientFormValues) {
     if (!db || loading) return;
@@ -108,6 +138,9 @@ export function PatientForm() {
 
       // Broadcast the change to other tabs
       broadcastChange('patient-added', { id });
+      
+      // Remove saved form data after successful submission
+      localStorage.removeItem(STORAGE_KEY);
 
       toast({
         title: "Patient registered successfully",
