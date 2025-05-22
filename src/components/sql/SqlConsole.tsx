@@ -218,9 +218,9 @@ export function SqlConsole() {
           <Card>
             <CardContent className="p-0">
               <ScrollArea className="h-[400px] rounded-md border theme-transition">
-                <div className="overflow-auto">
+                <div className="overflow-x-auto w-full">
                   {results.length > 0 ? (
-                    <div className="w-full min-w-max">
+                    <div className="w-full">
                       <table className="min-w-full divide-y divide-border">
                         <thead>
                           <tr>
