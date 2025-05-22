@@ -342,8 +342,8 @@ export function SqlConsole() {
         <TabsContent value="results" className="mt-4">
           <Card>
             <CardContent className="p-0">
-                <CardTitle className="text-xl p-2">SQL Console</CardTitle>
-              <div className="flex justify-end p-2 border-b">
+              <div className="flex justify-between p-2 border-b">
+              <CardTitle className="text-xl p-2">SQL Console</CardTitle>
                 <Button
                   variant="destructive"
                   size="sm"
