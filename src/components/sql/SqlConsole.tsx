@@ -342,6 +342,9 @@ export function SqlConsole() {
         <TabsContent value="results" className="mt-4">
           <Card>
             <CardContent className="p-0">
+            <div className="flex justify-start p-2">
+                <CardTitle className="text-xl">SQL Console</CardTitle>
+            </div>
               <div className="flex justify-end p-2 border-b">
                 <Button
                   variant="destructive"
@@ -354,8 +357,8 @@ export function SqlConsole() {
                   Reset
                 </Button>
               </div>
-              <ScrollArea className="h-[400px] rounded-md theme-transition">
-                <div className="overflow-auto">
+              <ScrollArea className="h-[400px] rounded-md theme-transition overflow-x-auto">
+                {/* <div className="overflow-auto"> */}
                   {results.length > 0 ? (
                     <div className="w-full min-w-max">
                       <table className="min-w-full divide-y divide-border">
@@ -394,7 +397,7 @@ export function SqlConsole() {
                       </p>
                     </div>
                   )}
-                </div>
+                {/* </div> */}
               </ScrollArea>
             </CardContent>
           </Card>
