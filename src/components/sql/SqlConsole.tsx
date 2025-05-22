@@ -56,7 +56,7 @@ export function SqlConsole() {
   const { toast } = useToast();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 6,
+    pageSize: 9,
   });
 
   useEffect(() => {
