@@ -333,7 +333,7 @@ export function SqlConsole() {
           <Card>
             <CardContent className="p-0">
               <div className="flex justify-between p-2 border-b">
-                <CardTitle className="text-xl pt-3">SQL Console</CardTitle>
+                <CardTitle className="text-xl pt-1">SQL Console</CardTitle>
                 <div>
                   <Button
                     variant="destructive"
@@ -347,7 +347,7 @@ export function SqlConsole() {
                   </Button>
                 </div>
               </div>
-              <ScrollArea className="h-[400px] rounded-md theme-transition">
+              <ScrollArea className="h-[300px] rounded-md theme-transition">
                 {results.length > 0 ? (
                   <div className="min-w-full w-fit overflow-x-auto">
                     <table className="min-w-max divide-y divide-border">
@@ -383,7 +383,7 @@ export function SqlConsole() {
                     </table>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[400px] w-full">
+                  <div className="flex items-center justify-center h-[300px] w-full">
                     <p className="text-muted-foreground theme-transition text-base">
                       {isExecuting
                         ? "Executing query..."
