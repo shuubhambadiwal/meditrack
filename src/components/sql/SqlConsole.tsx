@@ -300,8 +300,8 @@ export function SqlConsole() {
           <Card>
             <CardContent className="p-0">
               <div className="flex justify-between p-2 border-b">
-                <CardTitle className="text-xl pt-1">SQL Console</CardTitle>
-                <div>
+                <CardTitle className="text-xl pt-1 pl-1">SQL Console</CardTitle>
+                <div className="pr-1">
                   <Button
                     variant="destructive"
                     size="sm"
@@ -382,7 +382,7 @@ export function SqlConsole() {
                     ))}
                   </ul>
                 ) : (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center justify-center h-[300px] w-full">
                     <p className="text-muted-foreground theme-transition">
                       No query history
                     </p>
