@@ -32,9 +32,7 @@ const patientFormSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Gender is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z
-    .string()
-    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+  phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
   address: z.string().min(1, "Address is required"),
   insuranceProvider: z.string().optional(),
   insuranceNumber: z.string().optional(),
@@ -74,14 +72,13 @@ export function PatientForm() {
     mode: "onChange",
   });
 
-  
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
-        
-        form.reset({ ...DEFAULT_VALUES, ...parsedData });
+
+        form.reset({ ...DEFAULT_VALUES, ...parsedData, gender: parsedData.gender ?? "" });
       } catch (err) {
         console.error("Failed to parse saved form data:", err);
         form.reset(DEFAULT_VALUES);
@@ -89,9 +86,7 @@ export function PatientForm() {
     } else {
       form.reset(DEFAULT_VALUES);
     }
-    
-  }, []); 
-
+  }, []);
 
   const saveFormData = (values: Partial<PatientFormValues>) => {
     try {
@@ -101,21 +96,18 @@ export function PatientForm() {
     }
   };
 
-
   useEffect(() => {
     const subscription = form.watch((value) => saveFormData(value));
     return () => subscription.unsubscribe();
   }, [form]);
-
 
   const isFormEmpty = useMemo(() => {
     const values = form.getValues();
     return Object.values(values).every((v) => v === "" || v === undefined);
   }, [form.watch()]);
 
-  
   const handleClearForm = () => {
-    form.reset(DEFAULT_VALUES); 
+    form.reset(DEFAULT_VALUES);
     localStorage.removeItem(STORAGE_KEY);
     toast({
       title: "Form cleared",
@@ -172,7 +164,7 @@ export function PatientForm() {
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      form.reset(DEFAULT_VALUES); 
+      form.reset(DEFAULT_VALUES);
     } catch (err) {
       toast({
         variant: "destructive",
@@ -267,7 +259,7 @@ export function PatientForm() {
                     <FormLabel>Gender</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value || ""}
+                      value={field.value ?? ""}
                     >
                       <FormControl>
                         <SelectTrigger>
