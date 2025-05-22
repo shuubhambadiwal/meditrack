@@ -194,7 +194,6 @@ export function SqlConsole() {
         }
 
         setResultColumns(reorderedColumns);
-
       } else if (result.rows) {
         setResultColumns([]);
         setFormattedHeaders({});
@@ -210,7 +209,6 @@ export function SqlConsole() {
         setFormattedHeaders(headers);
         const queryResults = [{ rowCount: result.rowCount || "Success" }];
         setResults(queryResults);
-
       }
 
       setSqlHistory((prev) => {
@@ -262,7 +260,8 @@ export function SqlConsole() {
   const columns = resultColumns.map((column) => ({
     accessorKey: column,
     header: formattedHeaders[column] || formatColumnHeader(column),
-    cell: (info: any) => info.getValue() !== null ? String(info.getValue()) : "NULL",
+    cell: (info: any) =>
+      info.getValue() !== null ? String(info.getValue()) : "NULL",
   })) as ColumnDef<any>[];
 
   const table = useReactTable({
@@ -323,7 +322,6 @@ export function SqlConsole() {
           <TabsTrigger value="history">Query History</TabsTrigger>
         </TabsList>
 
-        
         <TabsContent value="results" className="mt-4">
           <Card>
             <CardContent className="p-0">
@@ -347,9 +345,9 @@ export function SqlConsole() {
                   <div>
                     <table className="table-fixed min-w-[800px] divide-y divide-border">
                       <thead>
-                        {table.getHeaderGroups().map(headerGroup => (
+                        {table.getHeaderGroups().map((headerGroup) => (
                           <tr key={headerGroup.id}>
-                            {headerGroup.headers.map(header => (
+                            {headerGroup.headers.map((header) => (
                               <th
                                 key={header.id}
                                 className="bg-muted px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap theme-transition"
@@ -364,9 +362,9 @@ export function SqlConsole() {
                         ))}
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {table.getRowModel().rows.map(row => (
+                        {table.getRowModel().rows.map((row) => (
                           <tr key={row.id}>
-                            {row.getVisibleCells().map(cell => (
+                            {row.getVisibleCells().map((cell) => (
                               <td
                                 key={cell.id}
                                 className="px-4 py-2 text-sm whitespace-nowrap theme-transition"
@@ -381,46 +379,6 @@ export function SqlConsole() {
                         ))}
                       </tbody>
                     </table>
-                    {/* Pagination Controls */}
-                    <div className="flex items-center justify-between px-4 py-2 border-t bg-background">
-                      <div className="text-sm text-muted-foreground">
-                        Page {pagination.pageIndex + 1} of {table.getPageCount()}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => table.setPageIndex(0)}
-                          disabled={!table.getCanPreviousPage()}
-                        >
-                          {"<<"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => table.previousPage()}
-                          disabled={!table.getCanPreviousPage()}
-                        >
-                          {"<"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => table.nextPage()}
-                          disabled={!table.getCanNextPage()}
-                        >
-                          {">"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                          disabled={!table.getCanNextPage()}
-                        >
-                          {">>"}
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] w-full">
@@ -431,6 +389,45 @@ export function SqlConsole() {
                     </p>
                   </div>
                 )}
+              </div>
+              <div className="flex items-center justify-between px-4 py-2 border-t bg-background sticky bottom-0 z-10">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    {"<<"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    {"<"}
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {pagination.pageIndex + 1} of {table.getPageCount()}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    {">"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    {">>"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
