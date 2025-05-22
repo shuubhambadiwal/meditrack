@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { useDb, broadcastChange, Patient, patientToSqlParams } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ const patientFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Gender is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal('')),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().min(1, "Phone number is required"),
   address: z.string().min(1, "Address is required"),
   insuranceProvider: z.string().optional(),
@@ -44,7 +44,7 @@ const patientFormSchema = z.object({
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 // Storage key for form data
-const STORAGE_KEY = 'patient_form_data';
+const STORAGE_KEY = "patient_form_data";
 
 export function PatientForm() {
   const { db, loading, error } = useDb();
@@ -68,7 +68,7 @@ export function PatientForm() {
       allergies: "",
     },
   });
-  
+
   // Load saved form data on component mount
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
@@ -81,7 +81,7 @@ export function PatientForm() {
       }
     }
   }, [form]);
-  
+
   // Save form data on change
   const saveFormData = (values: Partial<PatientFormValues>) => {
     try {
@@ -90,7 +90,7 @@ export function PatientForm() {
       console.error("Failed to save form data:", err);
     }
   };
-  
+
   // Update local storage when form values change
   useEffect(() => {
     const subscription = form.watch((value) => saveFormData(value));
@@ -105,7 +105,7 @@ export function PatientForm() {
     try {
       const now = new Date().toISOString();
       const id = uuidv4();
-      
+
       // Create patient object
       const patient: Patient = {
         id,
@@ -113,21 +113,22 @@ export function PatientForm() {
         lastName: values.lastName,
         dateOfBirth: values.dateOfBirth,
         gender: values.gender,
-        email: values.email || '',
-        phone: values.phone || '',
-        address: values.address || '',
-        insuranceProvider: values.insuranceProvider || '',
-        insuranceNumber: values.insuranceNumber || '',
-        medicalConditions: values.medicalConditions || '',
-        medications: values.medications || '',
-        allergies: values.allergies || '',
+        email: values.email || "",
+        phone: values.phone || "",
+        address: values.address || "",
+        insuranceProvider: values.insuranceProvider || "",
+        insuranceNumber: values.insuranceNumber || "",
+        medicalConditions: values.medicalConditions || "",
+        medications: values.medications || "",
+        allergies: values.allergies || "",
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       };
-      
+
       // Insert into PGlite database using parameterized query
       const params = patientToSqlParams(patient);
-      await db.query(`
+      await db.query(
+        `
         INSERT INTO patients (
           id, first_name, last_name, date_of_birth, gender, 
           email, phone, address, insurance_provider, insurance_number, 
@@ -135,11 +136,13 @@ export function PatientForm() {
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
         )
-      `, params);
+      `,
+        params
+      );
 
       // Broadcast the change to other tabs
-      broadcastChange('patient-added', { id });
-      
+      broadcastChange("patient-added", { id });
+
       // Remove saved form data after successful submission
       localStorage.removeItem(STORAGE_KEY);
 
@@ -153,7 +156,8 @@ export function PatientForm() {
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: err instanceof Error ? err.message : "An unknown error occurred",
+        description:
+          err instanceof Error ? err.message : "An unknown error occurred",
       });
       console.error(err);
     } finally {
@@ -173,13 +177,26 @@ export function PatientForm() {
 
   return (
     <Card className="w-full animate-fade-in theme-transition">
-         <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl">Patient Registration</CardTitle>
         <Button
           variant="outline"
           size="sm"
           onClick={() => {
-            form.reset();
+            form.reset({
+              firstName: "",
+              lastName: "",
+              dateOfBirth: "",
+              gender: "",
+              email: "",
+              phone: "",
+              address: "",
+              insuranceProvider: "",
+              insuranceNumber: "",
+              medicalConditions: "",
+              medications: "",
+              allergies: "",
+            });
             localStorage.removeItem(STORAGE_KEY);
           }}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
@@ -242,7 +259,10 @@ export function PatientForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -253,7 +273,9 @@ export function PatientForm() {
                         <SelectItem value="female">Female</SelectItem>
                         <SelectItem value="non-binary">Non-binary</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
-                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                        <SelectItem value="prefer-not-to-say">
+                          Prefer not to say
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -270,7 +292,11 @@ export function PatientForm() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john.doe@example.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="john.doe@example.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
