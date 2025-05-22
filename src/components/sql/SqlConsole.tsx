@@ -342,10 +342,10 @@ export function SqlConsole() {
                   </Button>
                 </div>
               </div>
-              <div className="min-w-full w-fit overflow-x-auto">
+              <div className="w-full min-h-[350px] overflow-x-auto">
                 {results.length > 0 ? (
                   <div>
-                    <table className="min-w-max divide-y divide-border">
+                    <table className="table-fixed min-w-[800px] divide-y divide-border">
                       <thead>
                         {table.getHeaderGroups().map(headerGroup => (
                           <tr key={headerGroup.id}>
@@ -382,7 +382,7 @@ export function SqlConsole() {
                       </tbody>
                     </table>
                     {/* Pagination Controls */}
-                    <div className="flex items-center justify-between px-4 py-2 border-t">
+                    <div className="flex items-center justify-between px-4 py-2 border-t bg-background">
                       <div className="text-sm text-muted-foreground">
                         Page {pagination.pageIndex + 1} of {table.getPageCount()}
                       </div>
