@@ -97,6 +97,28 @@ export function PatientForm() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  const handleClearForm = () => {
+    form.reset({
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      gender: "",
+      email: "",
+      phone: "",
+      address: "",
+      insuranceProvider: "",
+      insuranceNumber: "",
+      medicalConditions: "",
+      medications: "",
+      allergies: "",
+    });
+    localStorage.removeItem(STORAGE_KEY);
+    toast({
+      title: "Form cleared",
+      description: "The patient form has been reset."
+    });
+  };
+
   async function onSubmit(values: PatientFormValues) {
     if (!db || loading) return;
 
@@ -182,23 +204,7 @@ export function PatientForm() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            form.reset({
-              firstName: "",
-              lastName: "",
-              dateOfBirth: "",
-              gender: "",
-              email: "",
-              phone: "",
-              address: "",
-              insuranceProvider: "",
-              insuranceNumber: "",
-              medicalConditions: "",
-              medications: "",
-              allergies: "",
-            });
-            localStorage.removeItem(STORAGE_KEY);
-          }}
+          onClick={handleClearForm}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
         >
           <RefreshCcw className="h-4 w-4" />
