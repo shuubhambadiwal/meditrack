@@ -101,13 +101,11 @@ export function SqlConsole() {
   // Function to save settings to PGlite
   const saveSqlSettings = async (key: string, value: any) => {
     if (!db) return;
-    
     try {
-
       await db.exec(`
         INSERT INTO sql_settings (key, value) 
-        VALUES ($1, $2) 
-        ON CONFLICT (key) DO UPDATE SET value = $2
+        VALUES (?, ?) 
+        ON CONFLICT (key) DO UPDATE SET value = excluded.value
       `, [key, typeof value === 'object' ? JSON.stringify(value) : value]);
     } catch (err) {
       console.error(`Failed to save SQL setting ${key}:`, err);
