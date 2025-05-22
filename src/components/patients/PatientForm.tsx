@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useDb, broadcastChange, Patient, patientToSqlParams } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -172,8 +173,20 @@ export function PatientForm() {
 
   return (
     <Card className="w-full animate-fade-in theme-transition">
-      <CardHeader>
+         <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-2xl">Patient Registration</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            form.reset();
+            localStorage.removeItem(STORAGE_KEY);
+          }}
+          className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
+        >
+          <RefreshCcw className="h-4 w-4" />
+          Clear Form
+        </Button>
       </CardHeader>
       <CardContent>
         <Form {...form}>
