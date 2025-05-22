@@ -77,8 +77,22 @@ export function PatientForm() {
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
-
-        form.reset({ ...DEFAULT_VALUES, ...parsedData, gender: parsedData.gender ?? "" });
+  
+        const validGenders = [
+          "male",
+          "female",
+          "non-binary",
+          "other",
+          "prefer-not-to-say",
+          ""
+        ];
+        const gender =
+          typeof parsedData.gender === "string" &&
+          validGenders.includes(parsedData.gender)
+            ? parsedData.gender
+            : "";
+  
+        form.reset({ ...DEFAULT_VALUES, ...parsedData, gender });
       } catch (err) {
         console.error("Failed to parse saved form data:", err);
         form.reset(DEFAULT_VALUES);
