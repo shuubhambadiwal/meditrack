@@ -67,21 +67,6 @@ export function PatientForm() {
   const { db, loading, error } = useDb();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const [hydratedDefaults, setHydratedDefaults] = useState<PatientFormValues>(DEFAULT_VALUES);
-  
-  useEffect(() => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        setHydratedDefaults({ ...DEFAULT_VALUES, ...parsedData });
-      } catch {
-        setHydratedDefaults(DEFAULT_VALUES);
-      }
-    } else {
-      setHydratedDefaults(DEFAULT_VALUES);
-    }
-  }, []);
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
@@ -89,10 +74,24 @@ export function PatientForm() {
     mode: "onChange",
   });
 
+  
   useEffect(() => {
-    form.reset(hydratedDefaults);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydratedDefaults]);
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        
+        form.reset({ ...DEFAULT_VALUES, ...parsedData });
+      } catch (err) {
+        console.error("Failed to parse saved form data:", err);
+        form.reset(DEFAULT_VALUES);
+      }
+    } else {
+      form.reset(DEFAULT_VALUES);
+    }
+    
+  }, []); 
+
 
   const saveFormData = (values: Partial<PatientFormValues>) => {
     try {
