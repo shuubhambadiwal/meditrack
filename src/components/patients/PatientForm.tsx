@@ -45,7 +45,7 @@ const patientFormSchema = z.object({
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
-const STORAGE_KEY = "patient_form_data";
+const FORM_ID = "patient_form_data";
 
 // Default values as a constant for reuse
 const DEFAULT_VALUES: PatientFormValues = {
@@ -74,49 +74,73 @@ export function PatientForm() {
     mode: "onChange",
   });
 
-  
+  // Load saved form data from PGlite
   useEffect(() => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
+    if (!db || loading) return;
+    let ignore = false;
+    const loadFormData = async () => {
       try {
-        const parsedData = JSON.parse(savedData);
-        
-        form.reset({ ...DEFAULT_VALUES, ...parsedData });
+        const result = await db.query(
+          `SELECT form_data FROM form_persistence WHERE form_id = $1`,
+          [FORM_ID]
+        );
+        if (!ignore && result.rows && result.rows.length > 0) {
+          const parsedData = JSON.parse(result.rows[0].form_data);
+          form.reset({ ...DEFAULT_VALUES, ...parsedData });
+        } else if (!ignore) {
+          form.reset(DEFAULT_VALUES);
+        }
       } catch (err) {
-        console.error("Failed to parse saved form data:", err);
+        console.error("Failed to load saved form data:", err);
         form.reset(DEFAULT_VALUES);
       }
-    } else {
-      form.reset(DEFAULT_VALUES);
-    }
-    
-  }, []); 
+    };
+    loadFormData();
+    return () => {
+      ignore = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db, loading]);
 
-
-  const saveFormData = (values: Partial<PatientFormValues>) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
-    } catch (err) {
-      console.error("Failed to save form data:", err);
-    }
-  };
-
-
+  // Save form data to PGlite on change
   useEffect(() => {
-    const subscription = form.watch((value) => saveFormData(value));
+    if (!db) return;
+    const subscription = form.watch(async (value) => {
+      try {
+        await db.exec(
+          `
+          INSERT INTO form_persistence (form_id, form_data, updated_at)
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(form_id)
+          DO UPDATE SET form_data = excluded.form_data, updated_at = CURRENT_TIMESTAMP
+        `,
+          [FORM_ID, JSON.stringify(value)]
+        );
+      } catch (err) {
+        console.error("Failed to save form data:", err);
+      }
+    });
     return () => subscription.unsubscribe();
-  }, [form]);
-
+  }, [form, db]);
 
   const isFormEmpty = useMemo(() => {
     const values = form.getValues();
     return Object.values(values).every((v) => v === "" || v === undefined);
   }, [form.watch()]);
 
-  
-  const handleClearForm = () => {
-    form.reset(DEFAULT_VALUES); 
-    localStorage.removeItem(STORAGE_KEY);
+  // Clear form data from PGlite
+  const handleClearForm = async () => {
+    form.reset(DEFAULT_VALUES);
+    if (db) {
+      try {
+        await db.exec(
+          `DELETE FROM form_persistence WHERE form_id = ?`,
+          [FORM_ID]
+        );
+      } catch (err) {
+        console.error("Failed to clear form data:", err);
+      }
+    }
     toast({
       title: "Form cleared",
       description: "The patient form has been reset.",
@@ -165,14 +189,19 @@ export function PatientForm() {
       );
 
       broadcastChange("patient-added", { id });
-      localStorage.removeItem(STORAGE_KEY);
+
+      // Clear persisted form data after successful submit
+      await db.exec(
+        `DELETE FROM form_persistence WHERE form_id = ?`,
+        [FORM_ID]
+      );
 
       toast({
         title: "Patient registered successfully",
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      form.reset(DEFAULT_VALUES); 
+      form.reset(DEFAULT_VALUES);
     } catch (err) {
       toast({
         variant: "destructive",
@@ -214,6 +243,8 @@ export function PatientForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* ...existing form fields... */}
+            {/* No changes needed here */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
