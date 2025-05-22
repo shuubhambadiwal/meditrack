@@ -45,8 +45,23 @@ const patientFormSchema = z.object({
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
-// Storage key for form data
 const STORAGE_KEY = "patient_form_data";
+
+// Default values as a constant for reuse
+const DEFAULT_VALUES: PatientFormValues = {
+  firstName: "",
+  lastName: "",
+  dateOfBirth: "",
+  gender: "",
+  email: "",
+  phone: "",
+  address: "",
+  insuranceProvider: "",
+  insuranceNumber: "",
+  medicalConditions: "",
+  medications: "",
+  allergies: "",
+};
 
 export function PatientForm() {
   const { db, loading, error } = useDb();
@@ -55,36 +70,29 @@ export function PatientForm() {
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      gender: "",
-      email: "",
-      phone: "",
-      address: "",
-      insuranceProvider: "",
-      insuranceNumber: "",
-      medicalConditions: "",
-      medications: "",
-      allergies: "",
-    },
+    defaultValues: DEFAULT_VALUES,
+    mode: "onChange",
   });
 
-  // Load saved form data on component mount
+  
   useEffect(() => {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
-        form.reset(parsedData);
+        
+        form.reset({ ...DEFAULT_VALUES, ...parsedData });
       } catch (err) {
         console.error("Failed to parse saved form data:", err);
+        form.reset(DEFAULT_VALUES);
       }
+    } else {
+      form.reset(DEFAULT_VALUES);
     }
-  }, [form]);
+    
+  }, []); 
 
-  // Save form data on change
+
   const saveFormData = (values: Partial<PatientFormValues>) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
@@ -93,33 +101,21 @@ export function PatientForm() {
     }
   };
 
-  // Update local storage when form values change
+
   useEffect(() => {
     const subscription = form.watch((value) => saveFormData(value));
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // Helper: check if form is empty
+
   const isFormEmpty = useMemo(() => {
     const values = form.getValues();
     return Object.values(values).every((v) => v === "" || v === undefined);
   }, [form.watch()]);
 
+  
   const handleClearForm = () => {
-    form.reset({
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      gender: undefined, 
-      email: "",
-      phone: "",
-      address: "",
-      insuranceProvider: "",
-      insuranceNumber: "",
-      medicalConditions: "",
-      medications: "",
-      allergies: "",
-    });
+    form.reset(DEFAULT_VALUES); 
     localStorage.removeItem(STORAGE_KEY);
     toast({
       title: "Form cleared",
@@ -136,7 +132,6 @@ export function PatientForm() {
       const now = new Date().toISOString();
       const id = uuidv4();
 
-      // Create patient object
       const patient: Patient = {
         id,
         firstName: values.firstName,
@@ -155,7 +150,6 @@ export function PatientForm() {
         updatedAt: now,
       };
 
-      // Insert into PGlite database using parameterized query
       const params = patientToSqlParams(patient);
       await db.query(
         `
@@ -170,10 +164,7 @@ export function PatientForm() {
         params
       );
 
-      // Broadcast the change to other tabs
       broadcastChange("patient-added", { id });
-
-      // Remove saved form data after successful submission
       localStorage.removeItem(STORAGE_KEY);
 
       toast({
@@ -181,7 +172,7 @@ export function PatientForm() {
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      form.reset();
+      form.reset(DEFAULT_VALUES); // Reset to default values after submit
     } catch (err) {
       toast({
         variant: "destructive",
@@ -276,8 +267,7 @@ export function PatientForm() {
                     <FormLabel>Gender</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value || undefined} // Ensure controlled value
-                      defaultValue={undefined}
+                      value={field.value || ""}
                     >
                       <FormControl>
                         <SelectTrigger>
