@@ -56,7 +56,7 @@ export function SqlConsole() {
   const { toast } = useToast();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 8,
+    pageSize: 6,
   });
 
   useEffect(() => {
@@ -362,21 +362,27 @@ export function SqlConsole() {
                         ))}
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {table.getRowModel().rows.map((row) => (
-                          <tr key={row.id}>
-                            {row.getVisibleCells().map((cell) => (
-                              <td
-                                key={cell.id}
-                                className="px-4 py-2 text-sm whitespace-nowrap theme-transition"
-                              >
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
+                        {table
+                          .getRowModel()
+                          .rows.slice(
+                            pagination.pageIndex * pagination.pageSize,
+                            (pagination.pageIndex + 1) * pagination.pageSize
+                          )
+                          .map((row) => (
+                            <tr key={row.id}>
+                              {row.getVisibleCells().map((cell) => (
+                                <td
+                                  key={cell.id}
+                                  className="px-4 py-2 text-sm whitespace-nowrap theme-transition"
+                                >
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -408,7 +414,7 @@ export function SqlConsole() {
                   >
                     {"<"}
                   </Button>
-                  <div className="text-sm pt-1 text-muted-foreground">
+                  <div className="text-sm pt-3 text-muted-foreground">
                     Page {pagination.pageIndex + 1} of {table.getPageCount()}
                   </div>
                   <Button
