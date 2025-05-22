@@ -32,7 +32,9 @@ const patientFormSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.string().min(1, "Gender is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().min(1, "Phone number is required"),
+  phone: z
+    .string()
+    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
   address: z.string().min(1, "Address is required"),
   insuranceProvider: z.string().optional(),
   insuranceNumber: z.string().optional(),
@@ -97,20 +99,18 @@ export function PatientForm() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-   // Helper: check if form is empty
-   const isFormEmpty = useMemo(() => {
+  // Helper: check if form is empty
+  const isFormEmpty = useMemo(() => {
     const values = form.getValues();
-    return Object.values(values).every(
-      (v) => v === "" || v === undefined
-    );
-  }, [form.watch()]); 
+    return Object.values(values).every((v) => v === "" || v === undefined);
+  }, [form.watch()]);
 
   const handleClearForm = () => {
     form.reset({
       firstName: "",
       lastName: "",
       dateOfBirth: "",
-      gender: "",
+      gender: undefined, 
       email: "",
       phone: "",
       address: "",
@@ -123,7 +123,7 @@ export function PatientForm() {
     localStorage.removeItem(STORAGE_KEY);
     toast({
       title: "Form cleared",
-      description: "The patient form has been reset."
+      description: "The patient form has been reset.",
     });
   };
 
@@ -276,7 +276,8 @@ export function PatientForm() {
                     <FormLabel>Gender</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value || undefined} // Ensure controlled value
+                      defaultValue={undefined}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -325,7 +326,20 @@ export function PatientForm() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="(123) 456-7890" {...field} />
+                      <Input
+                        placeholder="(123) 456-7890"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        pattern="\d{10}"
+                        value={field.value}
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10);
+                          field.onChange(val);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
