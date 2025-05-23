@@ -435,7 +435,7 @@ export function SqlConsole() {
                   </Button>
                 </div>
               </div>
-              <div className="w-full min-h-[350px] theme-transition overflow-x-auto ">
+              <div className="w-full min-h-[350px] overflow-x-auto ">
                 {results.length > 0 ? (
                   <div>
                     <table className="table-fixed min-w-[800px] divide-y divide-border">
