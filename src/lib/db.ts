@@ -30,7 +30,7 @@ export async function initializeDb() {
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL, 
         date_of_birth TEXT NOT NULL,
-        age INTEGER NOT NULL, -- Added age column
+        age INTEGER, -- Add the age column here
         gender TEXT NOT NULL,
         email TEXT,
         phone TEXT,
