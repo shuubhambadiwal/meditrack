@@ -6,6 +6,7 @@ export interface Patient {
   firstName: string;
   lastName: string;
   dateOfBirth: string;
+  age: number
   gender: string;
   email: string;
   phone: string;
@@ -29,6 +30,7 @@ export async function initializeDb() {
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL, 
         date_of_birth TEXT NOT NULL,
+        age INTEGER NOT NULL, -- Added age column
         gender TEXT NOT NULL,
         email TEXT,
         phone TEXT,
@@ -119,6 +121,7 @@ export function mapRowToPatient(row: any): Patient {
     firstName: row.first_name,
     lastName: row.last_name,
     dateOfBirth: row.date_of_birth,
+    age: row.age,
     gender: row.gender,
     email: row.email || "",
     phone: row.phone || "",
@@ -140,6 +143,7 @@ export function patientToSqlParams(patient: Patient): any[] {
     patient.lastName,
     patient.dateOfBirth,
     patient.gender,
+    patient.age,
     patient.email,
     patient.phone,
     patient.address,

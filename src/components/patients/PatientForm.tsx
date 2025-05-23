@@ -172,6 +172,22 @@ export function PatientForm() {
     }
   };
 
+  function calculateAge(dateOfBirth: string): number {
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+  
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDifference = today.getMonth() - dob.getMonth();
+  
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < dob.getDate())
+    ) {
+      age--;
+    }
+    return age;
+  }
+
   async function onSubmit(values: PatientFormValues) {
     if (!db || loading) return;
 
@@ -180,12 +196,14 @@ export function PatientForm() {
     try {
       const now = new Date().toISOString();
       const id = uuidv4();
+      const age = calculateAge(values.dateOfBirth); 
 
       const patient: Patient = {
         id,
         firstName: values.firstName,
         lastName: values.lastName,
         dateOfBirth: values.dateOfBirth,
+        age,
         gender: values.gender,
         email: values.email || "",
         phone: values.phone || "",
@@ -203,12 +221,12 @@ export function PatientForm() {
       await db.query(
         `
         INSERT INTO patients (
-          id, first_name, last_name, date_of_birth, gender, 
-          email, phone, address, insurance_provider, insurance_number, 
-          medical_conditions, medications, allergies, created_at, updated_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-        )
+        id, first_name, last_name, date_of_birth, age, gender, 
+        email, phone, address, insurance_provider, insurance_number, 
+        medical_conditions, medications, allergies, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      )
       `,
         params
       );
