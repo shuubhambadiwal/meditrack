@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useDb, useDbChanges } from "@/lib/db";
+import { useDb, useDbChanges, saveToPGlite, broadcastChange } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Square } from "lucide-react";
+import { useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,30 +16,25 @@ import {
   PaginationState,
 } from "@tanstack/react-table";
 
-// Helper function to calculate age from date of birth
 const calculateAge = (dateOfBirth: string): number => {
   const dob = new Date(dateOfBirth);
   const today = new Date();
-
+  
   let age = today.getFullYear() - dob.getFullYear();
   const monthDifference = today.getMonth() - dob.getMonth();
-
-  if (
-    monthDifference < 0 ||
-    (monthDifference === 0 && today.getDate() < dob.getDate())
-  ) {
+  
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
     age--;
   }
-
   return age;
 };
 
-// Helper function to format column headers
+
 const formatColumnHeader = (header: string): string => {
   return header
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 };
 
 export function SqlConsole() {
@@ -47,9 +43,7 @@ export function SqlConsole() {
   const [results, setResults] = useState<any[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [resultColumns, setResultColumns] = useState<string[]>([]);
-  const [formattedHeaders, setFormattedHeaders] = useState<{
-    [key: string]: string;
-  }>({});
+  const [formattedHeaders, setFormattedHeaders] = useState<{[key: string]: string}>({});
   const [executionTime, setExecutionTime] = useState<number>(0);
   const [sqlHistory, setSqlHistory] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("results");
@@ -62,77 +56,82 @@ export function SqlConsole() {
   useEffect(() => {
     const loadSavedData = async () => {
       if (!db) return;
-
+      
       try {
-        const historyQuery = await db.query(
-          `SELECT value FROM sql_settings WHERE key = 'sql_history'`
-        );
-        if (historyQuery.rows?.length) {
-          setSqlHistory(JSON.parse(historyQuery.rows[0].value));
-        }
-
-        await db.exec(`
-          CREATE TABLE IF NOT EXISTS sql_settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-          );
-        `);
-
-        const queryResult = await db.query(
-          `SELECT value FROM sql_settings WHERE key = 'last_query'`
-        );
+        // Load saved query
+        const queryResult = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_query']);
         if (queryResult.rows && queryResult.rows.length > 0) {
           setSql(queryResult.rows[0].value);
         } else {
+          // Set default query if none exists
           setSql("SELECT * FROM patients;");
         }
-
-        const resultsQuery = await db.query(
-          `SELECT value FROM sql_settings WHERE key = 'last_results'`
-        );
-        const columnsQuery = await db.query(
-          `SELECT value FROM sql_settings WHERE key = 'last_columns'`
-        );
-        const headersQuery = await db.query(
-          `SELECT value FROM sql_settings WHERE key = 'last_headers'`
-        );
-
-        if (
-          resultsQuery.rows?.length &&
-          columnsQuery.rows?.length &&
-          headersQuery.rows?.length
-        ) {
-          setResults(JSON.parse(resultsQuery.rows[0].value));
-          setResultColumns(JSON.parse(columnsQuery.rows[0].value));
-          setFormattedHeaders(JSON.parse(headersQuery.rows[0].value));
+        
+        // Load saved results
+        const resultsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_results']);
+        const columnsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_columns']);
+        const headersQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_headers']);
+        const historyQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['sql_history']);
+        
+        if (resultsQuery.rows?.length && columnsQuery.rows?.length && headersQuery.rows?.length) {
+          try {
+            setResults(JSON.parse(resultsQuery.rows[0].value));
+            setResultColumns(JSON.parse(columnsQuery.rows[0].value));
+            setFormattedHeaders(JSON.parse(headersQuery.rows[0].value));
+          } catch (parseErr) {
+            console.error("Failed to parse SQL results:", parseErr);
+          }
+        }
+        
+        if (historyQuery.rows?.length) {
+          try {
+            setSqlHistory(JSON.parse(historyQuery.rows[0].value));
+          } catch (parseErr) {
+            console.error("Failed to parse SQL history:", parseErr);
+          }
         }
       } catch (err) {
         console.error("Failed to load saved SQL data:", err);
       }
     };
-
+    
     if (db && !loading) {
       loadSavedData();
     }
   }, [db, loading]);
 
+  useEffect(() => {
+    if (sql && db) {
+      const timeoutId = setTimeout(() => {
+        saveToPGlite(db, 'sql_settings', 'last_query', sql)
+          .catch(err => console.error("Failed to save SQL query:", err));
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [sql, db]);
+
   const resetResults = async () => {
     if (!db) return;
-
+    
     setResults([]);
     setResultColumns([]);
     setFormattedHeaders({});
-
+    
+    // Clear saved results from PGlite
     try {
-      await db.exec(`
+      await db.query(`
         DELETE FROM sql_settings 
-        WHERE key IN ('last_results', 'last_columns', 'last_headers')
-      `);
-
+        WHERE key IN ($1, $2, $3)
+      `, ['last_results', 'last_columns', 'last_headers']);
+      
       toast({
         title: "Results cleared",
         description: "Query results have been reset",
       });
+      
+      // Broadcast the change to other tabs
+      broadcastChange('results-cleared');
     } catch (err) {
       console.error("Failed to clear saved results:", err);
       toast({
@@ -143,83 +142,117 @@ export function SqlConsole() {
     }
   };
 
-  const executeQuery = async () => {
+  const executeQuery = useCallback(async () => {
     if (!db || loading || !sql.trim()) return;
 
     setIsExecuting(true);
     const startTime = performance.now();
 
     try {
+      // Execute the query using PGlite's query method
       const result = await db.query(sql);
-
+      
+      // Capture execution time
       const endTime = performance.now();
       setExecutionTime(endTime - startTime);
-
+      
+      // Process results
       if (result.rows && result.rows.length > 0) {
         const columns = Object.keys(result.rows[0]);
-
-        const processedResults = result.rows.map((row) => {
+        
+        // Process results - add age if date_of_birth is present
+        const processedResults = result.rows.map(row => {
           const processedRow = { ...row };
-
+          
+          // Add calculated age if date_of_birth exists
           if (row.date_of_birth) {
             processedRow.age = calculateAge(row.date_of_birth);
           }
-
+          
           return processedRow;
         });
-
-        const headers: { [key: string]: string } = {};
-        columns.forEach((col) => {
+        
+        // Create formatted headers mapping
+        const headers: {[key: string]: string} = {};
+        columns.forEach(col => {
           headers[col] = formatColumnHeader(col);
         });
-
-        if (columns.includes("date_of_birth")) {
-          headers["age"] = "Age";
+        
+        // Add 'age' to headers
+        if (columns.includes('date_of_birth')) {
+          headers['age'] = 'Age';
         }
-
+        
         setFormattedHeaders(headers);
         setResults(processedResults);
-
+        
+        // Reorder columns to place age right after gender if both exist
         let reorderedColumns = [...columns];
-
-        if (columns.includes("date_of_birth") && columns.includes("gender")) {
-          reorderedColumns = reorderedColumns.filter((col) => col !== "age");
-
-          const genderIndex = reorderedColumns.indexOf("gender");
+        
+        if (columns.includes('date_of_birth') && columns.includes('gender')) {
+          // Remove age if it was already there
+          reorderedColumns = reorderedColumns.filter(col => col !== 'age');
+          
+          // Find index of gender and insert age after it
+          const genderIndex = reorderedColumns.indexOf('gender');
           if (genderIndex !== -1) {
-            reorderedColumns.splice(genderIndex + 1, 0, "age");
+            reorderedColumns.splice(genderIndex + 1, 0, 'age');
           }
-        } else if (columns.includes("date_of_birth")) {
-          reorderedColumns.push("age");
+        } else if (columns.includes('date_of_birth')) {
+          // Just add age at the end if gender doesn't exist
+          reorderedColumns.push('age');
         }
-
+        
         setResultColumns(reorderedColumns);
+        
+        // Save results to PGlite
+        await saveToPGlite(db, 'sql_settings', 'last_results', processedResults);
+        await saveToPGlite(db, 'sql_settings', 'last_columns', reorderedColumns);
+        await saveToPGlite(db, 'sql_settings', 'last_headers', headers);
       } else if (result.rows) {
+        // Query returned an empty result set
         setResultColumns([]);
         setFormattedHeaders({});
         setResults([]);
-
-        await db.exec(`
+        
+        // Clear saved results
+        await db.query(`
           DELETE FROM sql_settings 
-          WHERE key IN ('last_results', 'last_columns', 'last_headers')
-        `);
+          WHERE key IN ($1, $2, $3)
+        `, ['last_results', 'last_columns', 'last_headers']);
       } else {
-        setResultColumns(["rowCount"]);
-        const headers = { rowCount: "Row Count" };
+        // Query was successful but didn't return rows (e.g., INSERT)
+        setResultColumns(['rowCount']);
+        const headers = { 'rowCount': 'Row Count' };
         setFormattedHeaders(headers);
-        const queryResults = [{ rowCount: result.rowCount || "Success" }];
+        const queryResults = [{ rowCount: result.rowCount || 'Success' }];
         setResults(queryResults);
+        
+        // Save results to PGlite
+        await saveToPGlite(db, 'sql_settings', 'last_results', queryResults);
+        await saveToPGlite(db, 'sql_settings', 'last_columns', ['rowCount']);
+        await saveToPGlite(db, 'sql_settings', 'last_headers', headers);
       }
 
-      setSqlHistory((prev) => {
+      // Update history
+      setSqlHistory(prev => {
+        // Only add to history if it's a new query
         if (!prev.includes(sql)) {
-          const newHistory = [...prev, sql].slice(-10);
+          const newHistory = [...prev, sql].slice(-10); // Keep last 10 queries
+          
+          // Save history to PGlite
+          saveToPGlite(db, 'sql_settings', 'sql_history', newHistory)
+            .catch(err => console.error("Failed to save SQL history:", err));
+          
           return newHistory;
         }
         return prev;
       });
-
+      
       setActiveTab("results");
+      
+      // Broadcast the change to other tabs
+      broadcastChange('results-updated');
 
       toast({
         title: "Query executed successfully",
@@ -229,25 +262,58 @@ export function SqlConsole() {
       toast({
         variant: "destructive",
         title: "Query failed",
-        description:
-          err instanceof Error ? err.message : "An unknown error occurred",
+        description: err instanceof Error ? err.message : "An unknown error occurred",
       });
       console.error(err);
     } finally {
       setIsExecuting(false);
     }
-  };
+  }, [db, loading, sql, toast]);
 
-  useDbChanges(async (message) => {
-    if (message.type === "patient-added" && activeTab === "results") {
-      if (sql.toLowerCase().includes("from patients")) {
+  const loadSavedData = useCallback(async () => {
+    if (!db) return;
+    
+    try {
+      // Load saved results
+      const resultsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_results']);
+      const columnsQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_columns']);
+      const headersQuery = await db.query(`SELECT value FROM sql_settings WHERE key = $1`, ['last_headers']);
+      
+      if (resultsQuery.rows?.length && columnsQuery.rows?.length && headersQuery.rows?.length) {
+        try {
+          setResults(JSON.parse(resultsQuery.rows[0].value));
+          setResultColumns(JSON.parse(columnsQuery.rows[0].value));
+          setFormattedHeaders(JSON.parse(headersQuery.rows[0].value));
+        } catch (parseErr) {
+          console.error("Failed to parse SQL results:", parseErr);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load saved SQL data:", err);
+    }
+  }, [db]);
+
+  const handleDbChange = useCallback((message: any) => {
+    if (message.type === 'patient-added' && activeTab === 'results') {
+      if (sql.toLowerCase().includes('from patients')) {
+        // Re-execute the query to refresh the results
         executeQuery();
       }
+    } else if (message.type === 'results-updated') {
+      // Reload the results from the database
+      loadSavedData();
+    } else if (message.type === 'results-cleared') {
+      setResults([]);
+      setResultColumns([]);
+      setFormattedHeaders({});
     }
-  });
+  }, [activeTab, sql, executeQuery, loadSavedData]);
+
+  useDbChanges(handleDbChange);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    // Execute on Ctrl+Enter or Cmd+Enter
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       executeQuery();
     }

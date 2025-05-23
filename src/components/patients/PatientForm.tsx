@@ -1,12 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid";
-import { useDb, broadcastChange, Patient, patientToSqlParams } from "@/lib/db";
+import {
+  useDb,
+  broadcastChange,
+  useDbChanges,
+  Patient,
+  patientToSqlParams,
+  saveToPGlite,
+} from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -25,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RefreshCcw } from "lucide-react";
 
 const patientFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -43,9 +50,9 @@ const patientFormSchema = z.object({
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
-const STORAGE_KEY = "patient_form_data";
 
-// Default values as a constant for reuse
+const FORM_ID = "patient_registration_form";
+
 const DEFAULT_VALUES: PatientFormValues = {
   firstName: "",
   lastName: "",
@@ -66,20 +73,12 @@ export function PatientForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  let initialValues = DEFAULT_VALUES;
-  const savedData = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-  if (savedData) {
-    try {
-      const parsedData = JSON.parse(savedData);
-      initialValues = { ...DEFAULT_VALUES, ...parsedData };
-      } catch (err) {
-        console.error("Failed to parse saved form data:", err);
-      }
-    } 
 
-  const saveFormData = (values: Partial<PatientFormValues>) => {
+  const saveFormData = async (values: Partial<PatientFormValues>) => {
+    if (!db) return;
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+      await saveToPGlite(db, "form_persistence", FORM_ID, values);
     } catch (err) {
       console.error("Failed to save form data:", err);
     }
@@ -87,27 +86,87 @@ export function PatientForm() {
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
-    defaultValues: initialValues,
-    mode: "onChange",
+    defaultValues: DEFAULT_VALUES,
   });
 
   useEffect(() => {
-    const subscription = form.watch((value) => saveFormData(value));
-    return () => subscription.unsubscribe();
-  }, [form]);
+    const subscription = form.watch((value) => {
+      if (db && !loading && Object.keys(value).length > 0) {
+       
+        const timeoutId = setTimeout(() => {
+          saveFormData(value);
+        }, 500);
 
-  const isFormEmpty = useMemo(() => {
-    const values = form.getValues();
-    return Object.values(values).every((v) => v === "" || v === undefined);
-  }, [form.watch()]);
-
-  const handleClearForm = () => {
-    form.reset(DEFAULT_VALUES);
-    localStorage.removeItem(STORAGE_KEY);
-    toast({
-      title: "Form cleared",
-      description: "The patient form has been reset.",
+        return () => clearTimeout(timeoutId);
+      }
     });
+
+    return () => subscription.unsubscribe();
+  }, [form, db, loading]);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (!db || loading) return;
+
+      try {
+        // Load saved form data
+        const result = await db.query(
+          `SELECT form_data FROM form_persistence WHERE form_id = $1`,
+          [FORM_ID]
+        );
+
+        if (result.rows && result.rows.length > 0) {
+          try {
+            const parsedData = JSON.parse(result.rows[0].form_data);
+          
+            form.reset({
+              ...DEFAULT_VALUES,
+              ...parsedData,
+              gender: parsedData.gender ?? "",
+            });
+          } catch (parseErr) {
+            console.error("Failed to parse form data:", parseErr);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load form data:", err);
+      }
+    };
+
+    if (db && !loading) {
+      loadFormData();
+    }
+  }, [db, loading, form]);
+
+
+
+  const clearForm = async () => {
+    if (!db) return;
+
+    try {
+     
+      form.reset(DEFAULT_VALUES);
+
+
+      await db.query(`DELETE FROM form_persistence WHERE form_id = $1`, [
+        FORM_ID,
+      ]);
+
+      toast({
+        title: "Form cleared",
+        description: "All form fields have been reset",
+      });
+
+     
+      broadcastChange("form-cleared", { id: FORM_ID });
+    } catch (err) {
+      console.error("Failed to clear form:", err);
+      toast({
+        variant: "destructive",
+        title: "Error clearing form",
+        description: "Failed to reset form fields",
+      });
+    }
   };
 
   async function onSubmit(values: PatientFormValues) {
@@ -119,6 +178,7 @@ export function PatientForm() {
       const now = new Date().toISOString();
       const id = uuidv4();
 
+   
       const patient: Patient = {
         id,
         firstName: values.firstName,
@@ -137,6 +197,7 @@ export function PatientForm() {
         updatedAt: now,
       };
 
+     
       const params = patientToSqlParams(patient);
       await db.query(
         `
@@ -151,15 +212,16 @@ export function PatientForm() {
         params
       );
 
+ 
       broadcastChange("patient-added", { id });
-      localStorage.removeItem(STORAGE_KEY);
 
       toast({
         title: "Patient registered successfully",
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      form.reset(DEFAULT_VALUES);
+      
+      clearForm();
     } catch (err) {
       toast({
         variant: "destructive",
@@ -172,6 +234,19 @@ export function PatientForm() {
       setIsSubmitting(false);
     }
   }
+
+ 
+  const handleDbChange = useCallback(
+    (message: any) => {
+      if (message.type === "form-cleared" && message.data?.id === FORM_ID) {
+        form.reset(DEFAULT_VALUES);
+      }
+    },
+    [form]
+  );
+
+  
+  useDbChanges(handleDbChange);
 
   if (error) {
     return (
@@ -190,8 +265,7 @@ export function PatientForm() {
         <Button
           variant="outline"
           size="sm"
-          onClick={handleClearForm}
-          disabled={isFormEmpty}
+          onClick={clearForm}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
         >
           <RefreshCcw className="h-4 w-4" />
@@ -252,10 +326,7 @@ export function PatientForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />

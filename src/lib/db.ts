@@ -1,5 +1,6 @@
+
 import { PGlite } from '@electric-sql/pglite';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Define our patient schema
 export interface Patient {
@@ -20,13 +21,13 @@ export interface Patient {
   updatedAt: string;
 }
 
-// Create and initialize the database
+
 export async function initializeDb() {
   try {
     // Use IndexedDB for persistence with a simple name
     const db = new PGlite('idb://meditrack');
     
-    // Create the patients table if it doesn't exist
+    
     await db.exec(`
       CREATE TABLE IF NOT EXISTS patients (
         id TEXT PRIMARY KEY,
@@ -47,6 +48,24 @@ export async function initializeDb() {
       );
     `);
     
+
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS form_persistence (
+        form_id TEXT PRIMARY KEY,
+        form_data TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    
+ 
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS sql_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    
     return db;
   } catch (error) {
     console.error('Database initialization error:', error);
@@ -54,8 +73,9 @@ export async function initializeDb() {
   }
 }
 
-// Database connection singleton
+
 let dbInstance: any = null;
+let dbChannel: BroadcastChannel;
 
 export async function getDb() {
   if (!dbInstance) {
@@ -64,7 +84,7 @@ export async function getDb() {
   return dbInstance;
 }
 
-// React hook for database operations
+
 export function useDb() {
   const [db, setDb] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +118,7 @@ export function useDb() {
   return { db, loading, error };
 }
 
-// Helper function to map SQL row to Patient object
+
 export function mapRowToPatient(row: any): Patient {
   return {
     id: row.id,
@@ -119,7 +139,7 @@ export function mapRowToPatient(row: any): Patient {
   };
 }
 
-// Helper function to convert Patient to SQL parameters
+
 export function patientToSqlParams(patient: Patient): any[] {
   return [
     patient.id,
@@ -140,25 +160,75 @@ export function patientToSqlParams(patient: Patient): any[] {
   ];
 }
 
-// Broadcast channel for cross-tab communication
-const dbChannel = new BroadcastChannel('meditrack-db-channel');
 
-// Function to broadcast data changes to other tabs
-export function broadcastChange(type: string, data?: any) {
-  dbChannel.postMessage({ type, data, timestamp: Date.now() });
+export async function saveToPGlite(db: any, tableName: string, key: string, value: any) {
+  if (!db) return;
+  
+  try {
+    const now = new Date().toISOString();
+    const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    
+    if (tableName === 'form_persistence') {
+
+      await db.query(`
+        INSERT INTO form_persistence (form_id, form_data, updated_at)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (form_id) 
+        DO UPDATE SET form_data = $2, updated_at = $3
+      `, [key, stringValue, now]);
+    } else if (tableName === 'sql_settings') {
+
+      await db.query(`
+        INSERT INTO sql_settings (key, value, updated_at)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (key) 
+        DO UPDATE SET value = $2, updated_at = $3
+      `, [key, stringValue, now]);
+    }
+  } catch (err) {
+    console.error(`Failed to save data to ${tableName}:`, err);
+    throw err;
+  }
 }
 
-// Hook to listen for changes from other tabs
+
+function getBroadcastChannel() {
+  if (typeof window === 'undefined') return null;
+  
+  if (!dbChannel) {
+    try {
+      dbChannel = new BroadcastChannel('meditrack-db-channel');
+    } catch (err) {
+      console.error('Failed to create BroadcastChannel:', err);
+      return null;
+    }
+  }
+  return dbChannel;
+}
+
+
+export function broadcastChange(type: string, data?: any) {
+  const channel = getBroadcastChannel();
+  if (!channel) return;
+  
+  channel.postMessage({ type, data, timestamp: Date.now() });
+}
+
+
 export function useDbChanges(callback: (message: any) => void) {
+  
   useEffect(() => {
+    const channel = getBroadcastChannel();
+    if (!channel) return;
+
     const handleMessage = (event: MessageEvent) => {
       callback(event.data);
     };
 
-    dbChannel.addEventListener('message', handleMessage);
+    channel.addEventListener('message', handleMessage);
 
     return () => {
-      dbChannel.removeEventListener('message', handleMessage);
+      channel.removeEventListener('message', handleMessage);
     };
-  }, [callback]);
+  }, [callback]); 
 }
