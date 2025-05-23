@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -101,6 +101,17 @@ export function PatientForm() {
     return () => subscription.unsubscribe();
   }, [form, db, loading]);
 
+  const watchedValues = form.watch();
+  const isFormEmpty = useMemo(
+    () =>
+      Object.keys(DEFAULT_VALUES).every(
+        (key) =>
+          watchedValues[key as keyof PatientFormValues] ===
+          DEFAULT_VALUES[key as keyof PatientFormValues]
+      ),
+    [watchedValues]
+  );
+
   useEffect(() => {
     const loadFormData = async () => {
       if (!db || loading) return;
@@ -133,6 +144,7 @@ export function PatientForm() {
       loadFormData();
     }
   }, [db, loading, form]);
+
 
   const clearForm = async () => {
     if (!db) return;
@@ -252,6 +264,7 @@ export function PatientForm() {
           size="sm"
           onClick={clearForm}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
+          disabled={isFormEmpty}
         >
           <RefreshCcw className="h-4 w-4" />
           Clear Form
