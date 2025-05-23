@@ -143,6 +143,7 @@ export function Dashboard() {
             <ul className="list-disc list-inside space-y-2">
               <li>Register patients in the Patients section</li>
               <li>Query patient data using SQL in the SQL Console</li>
+              <li>Persist patient data across page refreshes</li>
               <li>Data is synchronized across browser tabs automatically</li>
               <li>Toggle between light and dark mode using the theme button</li>
             </ul>
