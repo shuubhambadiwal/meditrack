@@ -1,8 +1,6 @@
+import { PGlite } from "@electric-sql/pglite";
+import { useState, useEffect, useCallback } from "react";
 
-import { PGlite } from '@electric-sql/pglite';
-import { useState, useEffect, useCallback } from 'react';
-
-// Define our patient schema
 export interface Patient {
   id: string;
   firstName: string;
@@ -21,13 +19,10 @@ export interface Patient {
   updatedAt: string;
 }
 
-
 export async function initializeDb() {
   try {
-    // Use IndexedDB for persistence with a simple name
-    const db = new PGlite('idb://meditrack');
-    
-    
+    const db = new PGlite("idb://meditrack");
+
     await db.exec(`
       CREATE TABLE IF NOT EXISTS patients (
         id TEXT PRIMARY KEY,
@@ -47,7 +42,6 @@ export async function initializeDb() {
         updated_at TEXT NOT NULL
       );
     `);
-    
 
     await db.exec(`
       CREATE TABLE IF NOT EXISTS form_persistence (
@@ -56,8 +50,7 @@ export async function initializeDb() {
         updated_at TEXT NOT NULL
       );
     `);
-    
- 
+
     await db.exec(`
       CREATE TABLE IF NOT EXISTS sql_settings (
         key TEXT PRIMARY KEY,
@@ -65,14 +58,13 @@ export async function initializeDb() {
         updated_at TEXT NOT NULL
       );
     `);
-    
+
     return db;
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error("Database initialization error:", error);
     throw error;
   }
 }
-
 
 let dbInstance: any = null;
 let dbChannel: BroadcastChannel;
@@ -83,7 +75,6 @@ export async function getDb() {
   }
   return dbInstance;
 }
-
 
 export function useDb() {
   const [db, setDb] = useState<any>(null);
@@ -102,7 +93,11 @@ export function useDb() {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to initialize database'));
+          setError(
+            err instanceof Error
+              ? err
+              : new Error("Failed to initialize database")
+          );
           setLoading(false);
         }
       }
@@ -118,7 +113,6 @@ export function useDb() {
   return { db, loading, error };
 }
 
-
 export function mapRowToPatient(row: any): Patient {
   return {
     id: row.id,
@@ -126,19 +120,18 @@ export function mapRowToPatient(row: any): Patient {
     lastName: row.last_name,
     dateOfBirth: row.date_of_birth,
     gender: row.gender,
-    email: row.email || '',
-    phone: row.phone || '',
-    address: row.address || '',
-    insuranceProvider: row.insurance_provider || '',
-    insuranceNumber: row.insurance_number || '',
-    medicalConditions: row.medical_conditions || '',
-    medications: row.medications || '',
-    allergies: row.allergies || '',
+    email: row.email || "",
+    phone: row.phone || "",
+    address: row.address || "",
+    insuranceProvider: row.insurance_provider || "",
+    insuranceNumber: row.insurance_number || "",
+    medicalConditions: row.medical_conditions || "",
+    medications: row.medications || "",
+    allergies: row.allergies || "",
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   };
 }
-
 
 export function patientToSqlParams(patient: Patient): any[] {
   return [
@@ -156,34 +149,43 @@ export function patientToSqlParams(patient: Patient): any[] {
     patient.medications,
     patient.allergies,
     patient.createdAt,
-    patient.updatedAt
+    patient.updatedAt,
   ];
 }
 
-
-export async function saveToPGlite(db: any, tableName: string, key: string, value: any) {
+export async function saveToPGlite(
+  db: any,
+  tableName: string,
+  key: string,
+  value: any
+) {
   if (!db) return;
-  
+
   try {
     const now = new Date().toISOString();
-    const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-    
-    if (tableName === 'form_persistence') {
+    const stringValue =
+      typeof value === "object" ? JSON.stringify(value) : String(value);
 
-      await db.query(`
+    if (tableName === "form_persistence") {
+      await db.query(
+        `
         INSERT INTO form_persistence (form_id, form_data, updated_at)
         VALUES ($1, $2, $3)
         ON CONFLICT (form_id) 
         DO UPDATE SET form_data = $2, updated_at = $3
-      `, [key, stringValue, now]);
-    } else if (tableName === 'sql_settings') {
-
-      await db.query(`
+      `,
+        [key, stringValue, now]
+      );
+    } else if (tableName === "sql_settings") {
+      await db.query(
+        `
         INSERT INTO sql_settings (key, value, updated_at)
         VALUES ($1, $2, $3)
         ON CONFLICT (key) 
         DO UPDATE SET value = $2, updated_at = $3
-      `, [key, stringValue, now]);
+      `,
+        [key, stringValue, now]
+      );
     }
   } catch (err) {
     console.error(`Failed to save data to ${tableName}:`, err);
@@ -191,32 +193,28 @@ export async function saveToPGlite(db: any, tableName: string, key: string, valu
   }
 }
 
-
 function getBroadcastChannel() {
-  if (typeof window === 'undefined') return null;
-  
+  if (typeof window === "undefined") return null;
+
   if (!dbChannel) {
     try {
-      dbChannel = new BroadcastChannel('meditrack-db-channel');
+      dbChannel = new BroadcastChannel("meditrack-db-channel");
     } catch (err) {
-      console.error('Failed to create BroadcastChannel:', err);
+      console.error("Failed to create BroadcastChannel:", err);
       return null;
     }
   }
   return dbChannel;
 }
 
-
 export function broadcastChange(type: string, data?: any) {
   const channel = getBroadcastChannel();
   if (!channel) return;
-  
+
   channel.postMessage({ type, data, timestamp: Date.now() });
 }
 
-
 export function useDbChanges(callback: (message: any) => void) {
-  
   useEffect(() => {
     const channel = getBroadcastChannel();
     if (!channel) return;
@@ -225,10 +223,10 @@ export function useDbChanges(callback: (message: any) => void) {
       callback(event.data);
     };
 
-    channel.addEventListener('message', handleMessage);
+    channel.addEventListener("message", handleMessage);
 
     return () => {
-      channel.removeEventListener('message', handleMessage);
+      channel.removeEventListener("message", handleMessage);
     };
-  }, [callback]); 
+  }, [callback]);
 }

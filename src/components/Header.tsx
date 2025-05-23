@@ -1,4 +1,3 @@
-
 import { ThemeToggle } from "./ThemeToggle";
 import { Sidebar, SidebarTrigger } from "./Sidebar";
 

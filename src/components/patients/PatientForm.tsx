@@ -50,7 +50,6 @@ const patientFormSchema = z.object({
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
 
-
 const FORM_ID = "patient_registration_form";
 
 const DEFAULT_VALUES: PatientFormValues = {
@@ -73,7 +72,6 @@ export function PatientForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-
   const saveFormData = async (values: Partial<PatientFormValues>) => {
     if (!db) return;
 
@@ -92,7 +90,6 @@ export function PatientForm() {
   useEffect(() => {
     const subscription = form.watch((value) => {
       if (db && !loading && Object.keys(value).length > 0) {
-       
         const timeoutId = setTimeout(() => {
           saveFormData(value);
         }, 500);
@@ -109,7 +106,6 @@ export function PatientForm() {
       if (!db || loading) return;
 
       try {
-        // Load saved form data
         const result = await db.query(
           `SELECT form_data FROM form_persistence WHERE form_id = $1`,
           [FORM_ID]
@@ -118,7 +114,7 @@ export function PatientForm() {
         if (result.rows && result.rows.length > 0) {
           try {
             const parsedData = JSON.parse(result.rows[0].form_data);
-          
+
             form.reset({
               ...DEFAULT_VALUES,
               ...parsedData,
@@ -138,15 +134,11 @@ export function PatientForm() {
     }
   }, [db, loading, form]);
 
-
-
   const clearForm = async () => {
     if (!db) return;
 
     try {
-     
       form.reset(DEFAULT_VALUES);
-
 
       await db.query(`DELETE FROM form_persistence WHERE form_id = $1`, [
         FORM_ID,
@@ -157,7 +149,6 @@ export function PatientForm() {
         description: "All form fields have been reset",
       });
 
-     
       broadcastChange("form-cleared", { id: FORM_ID });
     } catch (err) {
       console.error("Failed to clear form:", err);
@@ -178,7 +169,6 @@ export function PatientForm() {
       const now = new Date().toISOString();
       const id = uuidv4();
 
-   
       const patient: Patient = {
         id,
         firstName: values.firstName,
@@ -197,7 +187,6 @@ export function PatientForm() {
         updatedAt: now,
       };
 
-     
       const params = patientToSqlParams(patient);
       await db.query(
         `
@@ -212,7 +201,6 @@ export function PatientForm() {
         params
       );
 
- 
       broadcastChange("patient-added", { id });
 
       toast({
@@ -220,7 +208,6 @@ export function PatientForm() {
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      
       clearForm();
     } catch (err) {
       toast({
@@ -235,7 +222,6 @@ export function PatientForm() {
     }
   }
 
- 
   const handleDbChange = useCallback(
     (message: any) => {
       if (message.type === "form-cleared" && message.data?.id === FORM_ID) {
@@ -245,7 +231,6 @@ export function PatientForm() {
     [form]
   );
 
-  
   useDbChanges(handleDbChange);
 
   if (error) {
