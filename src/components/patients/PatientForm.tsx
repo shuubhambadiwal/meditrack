@@ -268,7 +268,7 @@ export function PatientForm() {
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John" {...field} />
+                      <Input placeholder="Shubham" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -282,7 +282,7 @@ export function PatientForm() {
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Doe" {...field} />
+                      <Input placeholder="Badiwal" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -343,7 +343,7 @@ export function PatientForm() {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="john.doe@example.com"
+                        placeholder="shubham.badiwal@example.com"
                         {...field}
                       />
                     </FormControl>
@@ -360,7 +360,7 @@ export function PatientForm() {
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="(123) 456-7890"
+                        placeholder="959595959"
                         type="tel"
                         inputMode="numeric"
                         maxLength={10}
@@ -388,7 +388,7 @@ export function PatientForm() {
                   <FormLabel>Address</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="123 Main St, City, State, ZIP"
+                      placeholder="111 Main St, City, State, ZIP"
                       className="resize-none"
                       {...field}
                     />
