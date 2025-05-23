@@ -146,21 +146,23 @@ export function PatientForm() {
   }, [db, loading, form]);
 
 
-  const clearForm = async () => {
+  const clearForm = async (showToast = true) => {
     if (!db) return;
-
+  
     try {
       form.reset(DEFAULT_VALUES);
-
+  
       await db.query(`DELETE FROM form_persistence WHERE form_id = $1`, [
         FORM_ID,
       ]);
-
-      toast({
-        title: "Form cleared",
-        description: "All form fields have been reset",
-      });
-
+  
+      if (showToast) {
+        toast({
+          title: "Form cleared",
+          description: "All form fields have been reset",
+        });
+      }
+  
       broadcastChange("form-cleared", { id: FORM_ID });
     } catch (err) {
       console.error("Failed to clear form:", err);
@@ -220,7 +222,7 @@ export function PatientForm() {
         description: `${values.firstName} ${values.lastName} has been added to the system.`,
       });
 
-      clearForm();
+      clearForm(false);
     } catch (err) {
       toast({
         variant: "destructive",
@@ -262,7 +264,7 @@ export function PatientForm() {
         <Button
           variant="outline"
           size="sm"
-          onClick={clearForm}
+          onClick={() => clearForm(true)}
           className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-600 flex items-center gap-1"
           disabled={isFormEmpty}
         >
