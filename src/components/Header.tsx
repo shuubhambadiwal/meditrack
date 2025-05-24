@@ -1,5 +1,5 @@
 import { ThemeToggle } from "./ThemeToggle";
-import { Sidebar, SidebarTrigger } from "./Sidebar";
+import { SidebarTrigger } from "./Sidebar";
 
 export function Header() {
   return (

@@ -1,4 +1,3 @@
-
 import { useState, createContext, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "react-router-dom";
@@ -7,29 +6,50 @@ import { Users, Database, Home } from "lucide-react";
 type SidebarContextType = {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
-export function Sidebar({ children, className }: { children?: React.ReactNode; className?: string }) {
+export function Sidebar({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const { isSidebarOpen, collapsed } = useSidebar();
+
   return (
-    <aside className={cn("border-r bg-sidebar transition-all duration-300", className)}>
+    <aside
+      className={cn(
+        "border-r bg-sidebar transition-all w-[240px] duration-300",
+        isSidebarOpen ? (collapsed ? "w-16" : "w-[236px]") : "hidden",
+        className
+      )}
+    >
       {children}
     </aside>
   );
 }
 
-export function SidebarProvider({ 
-  children, 
-  defaultCollapsed = false 
-}: { 
-  children: React.ReactNode; 
+export function SidebarProvider({
+  children,
+  defaultCollapsed = false,
+}: {
+  children: React.ReactNode;
   defaultCollapsed?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
+    <SidebarContext.Provider
+      value={{ collapsed, setCollapsed, isSidebarOpen, toggleSidebar }}
+    >
       {children}
     </SidebarContext.Provider>
   );
@@ -44,38 +64,19 @@ export function useSidebar() {
 }
 
 export function SidebarTrigger({ className }: { className?: string }) {
-  const { collapsed, setCollapsed } = useSidebar();
-  
+  const { collapsed, setCollapsed, toggleSidebar, isSidebarOpen } =
+    useSidebar();
+
   return (
     <button
-      className={cn("flex items-center justify-center p-2", className)}
-      onClick={() => setCollapsed(!collapsed)}
+      className={cn("flex items-center justify-center", className)}
+      onClick={() => {
+        toggleSidebar();
+        setCollapsed(!collapsed);
+      }}
       aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {collapsed ? (
-          <>
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </>
-        ) : (
-          <>
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </>
-        )}
-      </svg>
+      {isSidebarOpen ? "✖" : "☰"}
     </button>
   );
 }

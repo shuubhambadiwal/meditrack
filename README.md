@@ -3,7 +3,7 @@ MediTrack
 
 1. **Clone the Repository**  
    Run the following command to clone the repository:
-   git clone https://github.com/your-username/meditrack.git
+   git clone https://github.com/shuubhambadiwal/meditrack.git
    cd meditrack
 
 2. **Install Dependencies**  
