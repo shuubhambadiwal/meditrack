@@ -137,15 +137,21 @@ export function Dashboard() {
           <div className="space-y-4">
             <p>
               This patient management system lets you register patients and query their data using SQL.
-              All data is stored locally in your browser using PGlite.
+              All data is stored in your browser using PGlite.
             </p>
-            <h3 className="text-lg font-medium">Get Started</h3>
+            <h3 className="text-lg font-medium">Key Features</h3>
             <ul className="list-disc list-inside space-y-2">
-              <li>Register patients in the Patients section</li>
-              <li>Query patient data using SQL in the SQL Console</li>
+              <li>You can Register new patients.</li>
+              <li>Query patient data using raw SQL in the SQL Console</li>
               <li>Persist patient data across page refreshes</li>
               <li>Data is synchronized across browser tabs automatically</li>
-              <li>Toggle between light and dark mode using the theme button</li>
+            </ul>
+            <h3 className="text-lg font-medium">Get Started</h3>
+            <ul className="list-disc list-inside space-y-2">
+              <li>In this Dashboard, the total and last week patients count will be there & info about this project.</li>
+              <li>In the Patients section, register new patients. Un-register form are also persist on refresh. You can Reset form using clear form button.</li>
+              <li>Query results will be shown in the table with pagination in SQL Console. Query history for each unique command, persist on refresh & synced.</li>
+              <li>Toggle between light and dark mode using the theme button. Also it is Responsive(Desktop, Tablet, Mobile).</li>
             </ul>
           </div>
         </CardContent>
