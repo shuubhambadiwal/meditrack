@@ -6,6 +6,9 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => ({
+  optimizeDeps: {
+    exclude: ['@electric-sql/pglite'],
+  },
   server: {
     host: "::",
     port: 8080,
