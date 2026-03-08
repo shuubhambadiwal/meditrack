@@ -60,7 +60,7 @@ export function Dashboard() {
     return (
       <div className="flex items-center justify-center p-4">
         <div className="text-destructive">
-          Failed to load database: {error.message}
+          Failed to load the database: {error.message}
         </div>
       </div>
     );
